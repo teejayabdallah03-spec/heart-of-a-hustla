@@ -1,0 +1,258 @@
+"use strict";
+
+const crypto = require("node:crypto");
+
+const SHIPPING_CENTS = 1000;
+const MAX_REQUEST_BYTES = 32 * 1024;
+const SIZES = new Set(["S", "M", "L", "XL", "2XL", "3XL"]);
+const PRODUCTS = new Map([
+  ["ambition-blue", { name: "Built on Ambition Studded Zip Hoodie", color: "Royal Blue", price: 6000 }],
+  ["ambition-pink", { name: "Built on Ambition Studded Zip Hoodie", color: "Rose Pink", price: 6000 }],
+  ["ambition-black", { name: "Built on Ambition Studded Zip Hoodie", color: "Black", price: 6000 }],
+  ["ambition-orange", { name: "Built on Ambition Studded Zip Hoodie", color: "Orange", price: 6000 }],
+  ["ambition-yellow", { name: "Built on Ambition Studded Zip Hoodie", color: "Sunshine Yellow", price: 6000 }]
+]);
+
+function stripeSecret() {
+  const key = process.env.STRIPE_SECRET_KEY || "";
+  return /^sk_(test|live)_[A-Za-z0-9]+$/.test(key) ? key : "";
+}
+
+function siteOrigin(rawUrl) {
+  const configured = process.env.PUBLIC_BASE_URL;
+  const url = new URL(configured || rawUrl);
+  if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) {
+    throw new Error("invalid_site_url");
+  }
+  if (configured && (url.pathname !== "/" || url.search || url.hash)) {
+    throw new Error("invalid_site_url");
+  }
+  return url.origin;
+}
+
+function paymentReady(rawUrl) {
+  const key = stripeSecret();
+  if (!key) return false;
+  if (key.startsWith("sk_test_")) return true;
+  try {
+    return process.env.NODE_ENV === "production"
+      && process.env.STRIPE_LIVE_PAYMENTS === "true"
+      && new URL(siteOrigin(rawUrl)).protocol === "https:";
+  } catch (error) {
+    console.error("[payments] Invalid public site URL", error.message);
+    return false;
+  }
+}
+
+function jsonResponse(statusCode, payload) {
+  return {
+    statusCode,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff"
+    },
+    body: JSON.stringify(payload)
+  };
+}
+
+function parseRequestBody(event) {
+  if (typeof event.body !== "string" || Buffer.byteLength(event.body, "utf8") > MAX_REQUEST_BYTES) {
+    return null;
+  }
+  try {
+    return JSON.parse(event.isBase64Encoded
+      ? Buffer.from(event.body, "base64").toString("utf8")
+      : event.body);
+  } catch {
+    return null;
+  }
+}
+
+function validateCustomer(value) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  const customer = {
+    name: String(value.name || "").trim(),
+    email: String(value.email || "").trim().toLowerCase(),
+    phone: String(value.phone || "").trim(),
+    address: String(value.address || "").trim(),
+    city: String(value.city || "").trim(),
+    state: String(value.state || "").trim(),
+    zip: String(value.zip || "").trim(),
+    country: String(value.country || "").trim().toUpperCase()
+  };
+  if (customer.name.length < 2 || customer.name.length > 100) return null;
+  if (customer.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) return null;
+  if (customer.phone.length > 30 || !customer.address || customer.address.length > 200) return null;
+  if (!customer.city || customer.city.length > 100 || !customer.state || customer.state.length > 100) return null;
+  if (!customer.zip || customer.zip.length > 20 || !["US", "CA"].includes(customer.country)) return null;
+  return customer;
+}
+
+function validateItems(value) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > 30) return null;
+  const items = [];
+  for (const entry of value) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return null;
+    const product = PRODUCTS.get(String(entry.id || ""));
+    const size = String(entry.size || "");
+    const quantity = Number(entry.quantity);
+    if (!product || !SIZES.has(size) || !Number.isInteger(quantity) || quantity < 1 || quantity > 10) {
+      return null;
+    }
+    items.push({ id: String(entry.id), ...product, size, quantity });
+  }
+  return items;
+}
+
+async function stripeRequest(endpoint, fields, method = "POST") {
+  const secret = stripeSecret();
+  if (!secret) throw new Error("stripe_not_configured");
+  const options = {
+    method,
+    headers: {
+      Authorization: `Bearer ${secret}`,
+      Accept: "application/json"
+    }
+  };
+  let url = `https://api.stripe.com/v1/${endpoint}`;
+  if (method === "GET") {
+    url += `?${new URLSearchParams(fields)}`;
+  } else {
+    options.headers["Content-Type"] = "application/x-www-form-urlencoded";
+    options.body = new URLSearchParams(fields).toString();
+  }
+
+  const response = await fetch(url, options);
+  let result;
+  try {
+    result = await response.json();
+  } catch {
+    throw new Error("stripe_invalid_response");
+  }
+  if (!response.ok) {
+    console.error("[payments] Stripe request failed", {
+      endpoint,
+      status: response.status,
+      code: result.error?.code || "unknown"
+    });
+    throw new Error("stripe_request_failed");
+  }
+  return result;
+}
+
+function validateRequestOrigin(event, origin) {
+  const requestOrigin = event.headers?.origin;
+  return !requestOrigin || requestOrigin === origin;
+}
+
+async function createCheckout(event) {
+  let origin;
+  try {
+    origin = siteOrigin(event.rawUrl);
+  } catch (error) {
+    console.error("[payments] Invalid public site URL", error.message);
+    return jsonResponse(503, { error: "Secure checkout is not configured." });
+  }
+  if (!paymentReady(event.rawUrl)) {
+    return jsonResponse(503, { error: "Secure checkout is not configured." });
+  }
+  if (!validateRequestOrigin(event, origin)) {
+    return jsonResponse(403, { error: "Checkout request origin was rejected." });
+  }
+
+  const body = parseRequestBody(event);
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return jsonResponse(400, { error: "Checkout details could not be read." });
+  }
+  const items = validateItems(body.items);
+  const customer = validateCustomer(body.customer);
+  if (!items || !customer) {
+    return jsonResponse(400, { error: "Check your contact, shipping, size, and cart details." });
+  }
+
+  try {
+    const stripeCustomer = await stripeRequest("customers", {
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+      "address[line1]": customer.address,
+      "address[city]": customer.city,
+      "address[state]": customer.state,
+      "address[postal_code]": customer.zip,
+      "address[country]": customer.country,
+      "shipping[name]": customer.name,
+      "shipping[phone]": customer.phone,
+      "shipping[address][line1]": customer.address,
+      "shipping[address][city]": customer.city,
+      "shipping[address][state]": customer.state,
+      "shipping[address][postal_code]": customer.zip,
+      "shipping[address][country]": customer.country
+    });
+
+    const fields = {
+      mode: "payment",
+      customer: stripeCustomer.id,
+      client_reference_id: crypto.randomUUID(),
+      "metadata[store]": "heart-of-a-hustla",
+      "billing_address_collection": "auto",
+      "shipping_address_collection[allowed_countries][0]": customer.country,
+      "phone_number_collection[enabled]": "true",
+      "shipping_options[0][shipping_rate_data][type]": "fixed_amount",
+      "shipping_options[0][shipping_rate_data][fixed_amount][amount]": String(SHIPPING_CENTS),
+      "shipping_options[0][shipping_rate_data][fixed_amount][currency]": "usd",
+      "shipping_options[0][shipping_rate_data][display_name]": "Flat-rate shipping",
+      "success_url": `${origin}/?checkout_session_id={CHECKOUT_SESSION_ID}#collection`,
+      "cancel_url": `${origin}/?checkout=cancel#collection`,
+      "expires_at": String(Math.floor(Date.now() / 1000) + 31 * 60)
+    };
+    items.forEach((item, index) => {
+      fields[`line_items[${index}][price_data][currency]`] = "usd";
+      fields[`line_items[${index}][price_data][unit_amount]`] = String(item.price);
+      fields[`line_items[${index}][price_data][product_data][name]`] = `${item.name} — ${item.color} / Size ${item.size}`;
+      fields[`line_items[${index}][quantity]`] = String(item.quantity);
+    });
+
+    const session = await stripeRequest("checkout/sessions", fields);
+    if (!session.url || !session.url.startsWith("https://checkout.stripe.com/")) {
+      throw new Error("stripe_checkout_url_missing");
+    }
+    return jsonResponse(200, { checkoutUrl: session.url });
+  } catch (error) {
+    if (error.message === "stripe_not_configured") {
+      return jsonResponse(503, { error: "Secure checkout is not configured." });
+    }
+    console.error("[payments] Unable to create a checkout session", error.message);
+    return jsonResponse(502, { error: "Secure checkout is temporarily unavailable. Please try again." });
+  }
+}
+
+async function verifyCheckoutSession(event) {
+  if (!stripeSecret()) {
+    return jsonResponse(503, { error: "Secure checkout is not configured." });
+  }
+  const sessionId = event.queryStringParameters?.session_id || "";
+  if (!/^cs_(test|live)_[A-Za-z0-9]+$/.test(sessionId)) {
+    return jsonResponse(400, { error: "Checkout reference is invalid." });
+  }
+  try {
+    const session = await stripeRequest(`checkout/sessions/${encodeURIComponent(sessionId)}`, {}, "GET");
+    if (session.metadata?.store !== "heart-of-a-hustla") {
+      return jsonResponse(404, { error: "Checkout reference was not found." });
+    }
+    return jsonResponse(200, {
+      paymentStatus: session.payment_status,
+      orderReference: session.id.slice(-8).toUpperCase()
+    });
+  } catch (error) {
+    console.error("[payments] Unable to verify a checkout session", error.message);
+    return jsonResponse(502, { error: "Payment status is temporarily unavailable." });
+  }
+}
+
+module.exports = {
+  createCheckout,
+  jsonResponse,
+  paymentReady,
+  verifyCheckoutSession
+};
