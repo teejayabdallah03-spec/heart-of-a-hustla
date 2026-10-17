@@ -37,6 +37,11 @@ body{overflow-x:clip}.community-heading{flex-wrap:wrap}.community-heading .text-
 @media(max-width:700px){.brand-monogram{width:44px;height:44px}.footer-wordmark .brand-monogram{width:50px;height:48px}.product-grid:has(.product-card:nth-child(2)){grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.product-image{padding:5px 9px 15px}.neon-sign{width:min(50vw,220px);top:7%;right:4%;padding:8px 7px 6px;font-size:12px;opacity:.92}.neon-sign i{font-size:7px;margin-top:2px;padding-top:5px}}
 @media(prefers-reduced-motion:reduce){.neon-sign img{animation:none}}
 
+.community-neon-stage{min-height:240px;aspect-ratio:2.5;display:grid;place-items:center;overflow:hidden;border:1px solid var(--line);background:radial-gradient(ellipse at center,rgba(242,29,61,.12),transparent 62%),#151413}
+.community-neon-stage img{display:block;width:min(58%,620px);max-height:280px;object-fit:contain;filter:brightness(0) saturate(100%) invert(17%) sepia(96%) saturate(6955%) hue-rotate(338deg) brightness(112%) contrast(115%) drop-shadow(0 0 3px #fff) drop-shadow(0 0 10px #ff2143) drop-shadow(0 0 24px #f21d3d);animation:neon-breathe 3.4s ease-in-out infinite alternate}
+@media(max-width:700px){.community-neon-stage{min-height:165px;aspect-ratio:1.5}.community-neon-stage img{width:82%;max-height:190px}}
+@media(prefers-reduced-motion:reduce){.community-neon-stage img{animation:none}}
+
 .coming-soon{padding-top:25px;padding-bottom:108px;border-top:1px solid var(--line)}
 .coming-soon .section-heading{margin-bottom:32px}
 .coming-soon-intro{max-width:250px;margin:0 0 4px;color:#b5b2ab;font-size:12px}
