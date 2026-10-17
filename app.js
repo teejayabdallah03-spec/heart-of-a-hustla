@@ -9,6 +9,11 @@ const PRODUCTS = [
 ];
 const COMING_SOON_PRODUCTS = [
   { name: "Heart Rhinestone Zip Hoodie", color: "Rose Pink", image: "assets/coming-soon-zip-hoodie-pink.png", alt: "Rose pink cropped zip hoodie with rhinestone Heart of a Hustla detailing" },
+  { name: "Heart Rhinestone Zip Hoodie", color: "Red", image: "assets/coming-soon-crop-hoodie-red.png", alt: "Red cropped zip hoodie with rhinestone Heart of a Hustla detailing" },
+  { name: "Heart Rhinestone Zip Hoodie", color: "Royal Blue", image: "assets/coming-soon-crop-hoodie-blue.png", alt: "Royal blue cropped zip hoodie with rhinestone Heart of a Hustla detailing" },
+  { name: "Heart Rhinestone Zip Hoodie", color: "Sunshine Yellow", image: "assets/coming-soon-crop-hoodie-yellow.png", alt: "Sunshine yellow cropped zip hoodie with rhinestone Heart of a Hustla detailing" },
+  { name: "Heart Rhinestone Zip Hoodie", color: "Black", image: "assets/coming-soon-crop-hoodie-black.png", alt: "Black cropped zip hoodie with rhinestone Heart of a Hustla detailing" },
+  { name: "Heart Rhinestone Zip Hoodie", color: "Purple", image: "assets/coming-soon-crop-hoodie-purple.png", alt: "Purple cropped zip hoodie with rhinestone Heart of a Hustla detailing" },
   { name: "Heart of a Hustla Knit Beanie", color: "Black", image: "assets/coming-soon-beanie-black.png", alt: "Black knit beanie embroidered with the Heart of a Hustla logo" },
   { name: "Heart Varsity Jacket", color: "Black & Orange", image: "assets/coming-soon-varsity-orange.png", alt: "Black varsity jacket with orange sleeves and Heart of a Hustla back graphic" },
   { name: "Heart Varsity Jacket", color: "Black & White", image: "assets/coming-soon-varsity-black-white.png", alt: "Black varsity jacket with white sleeves and Heart of a Hustla back graphic" },
