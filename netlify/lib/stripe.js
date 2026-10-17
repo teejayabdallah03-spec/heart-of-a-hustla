@@ -15,7 +15,7 @@ const PRODUCTS = new Map([
 
 function stripeSecret() {
   const key = process.env.STRIPE_SECRET_KEY || "";
-  return /^sk_(test|live)_[A-Za-z0-9]+$/.test(key) ? key : "";
+  return /^(sk|rk)_(test|live)_[A-Za-z0-9]+$/.test(key) ? key : "";
 }
 
 function siteOrigin(rawUrl) {
@@ -33,7 +33,7 @@ function siteOrigin(rawUrl) {
 function paymentReady(rawUrl) {
   const key = stripeSecret();
   if (!key) return false;
-  if (key.startsWith("sk_test_")) return true;
+  if (/^(sk|rk)_test_/.test(key)) return true;
   try {
     return process.env.NODE_ENV === "production"
       && process.env.STRIPE_LIVE_PAYMENTS === "true"

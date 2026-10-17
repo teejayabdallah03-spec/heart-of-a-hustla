@@ -23,9 +23,9 @@ Run `node server.js` from this folder and open `http://localhost:4173`. To build
 ## Connect Stripe
 
 1. Create or sign in to the owner's Stripe account and add the payout bank account in Stripe's Dashboard.
-2. Copy `.env.example` to `.env` and set `STRIPE_SECRET_KEY` to the owner's **test** secret key (`sk_test_...`). Keep `.env` private; it is excluded from version control.
+2. Copy `.env.example` to `.env` and set `STRIPE_SECRET_KEY` to a **test restricted key** (`rk_test_...`) or test secret key (`sk_test_...`). For a restricted key, grant **Customers: Write** and **Checkout Sessions: Write** only; Stripe's Write permission includes Read. Keep `.env` private; it is excluded from version control.
 3. Run `node server.js`, open `http://localhost:4173`, and complete a test-mode checkout. The browser only receives a Stripe-hosted Checkout URL; the secret key and card details stay off the storefront.
-4. Before launch, deploy the Node server or the Netlify Functions behind HTTPS. Use the owner's live Stripe secret key and explicitly set `STRIPE_LIVE_PAYMENTS=true` only after testing. Live charges are intentionally blocked without production mode, HTTPS, and this opt-in.
+4. Before launch, deploy the Node server or the Netlify Functions behind HTTPS. Create a live restricted key with the same tested permissions, set it as `STRIPE_SECRET_KEY`, and explicitly set `STRIPE_LIVE_PAYMENTS=true` only after testing. Live charges are intentionally blocked without production mode, HTTPS, and this opt-in.
 
 Stripe Checkout sends the payment to the Stripe account associated with `STRIPE_SECRET_KEY`; configured Stripe payouts then send funds to the bank account on that Stripe account. The ZIP supplied for reference is a mock/demo gateway, not a real processor, so its simulated approval flow is not used.
 
@@ -33,8 +33,8 @@ Stripe Checkout sends the payment to the Stripe account associated with `STRIPE_
 
 The Netlify build publishes only the storefront and its referenced product assets from `dist/`. The three `/api/*` endpoints are routed to Netlify Functions; the local `server.js`, source-only images, and `.env` are not deployed as public files. Connect the private GitHub repository to Netlify, set the build command to `node build.js` and publish directory to `dist` (these are already specified in `netlify.toml`), then add the Stripe settings in the Netlify site's private environment variables:
 
-- For initial testing: `STRIPE_SECRET_KEY` set to the Stripe test secret key. Test mode may be used on a Netlify preview URL; it never charges a real card.
-- For live payments after test checkout succeeds: set `PUBLIC_BASE_URL` to the site's canonical HTTPS URL, `STRIPE_SECRET_KEY` to the owner's live secret key, and `STRIPE_LIVE_PAYMENTS=true`. Keep `NODE_ENV=production` for the production deploy. Live checkout remains blocked unless all live-mode requirements are met.
+- For initial testing: `STRIPE_SECRET_KEY` set to the Stripe test restricted key (`rk_test_...`) or test secret key. A restricted key for this integration only needs **Customers: Write** and **Checkout Sessions: Write**. Test mode may be used on a Netlify preview URL; it never charges a real card.
+- For live payments after test checkout succeeds: set `PUBLIC_BASE_URL` to the site's canonical HTTPS URL, `STRIPE_SECRET_KEY` to the owner's live restricted key (`rk_live_...`) with those same permissions, and `STRIPE_LIVE_PAYMENTS=true`. Keep `NODE_ENV=production` for the production deploy. Live checkout remains blocked unless all live-mode requirements are met.
 
 Trigger a fresh production deploy after changing environment variables, and verify both `/api/status` and a successful Stripe test-mode payment flow before enabling live charges. Do not commit or publish `.env`.
 

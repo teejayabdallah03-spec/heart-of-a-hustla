@@ -36,7 +36,7 @@ const HOST = process.env.HOST || "127.0.0.1";
 
 function stripeSecret() {
   const key = process.env.STRIPE_SECRET_KEY || "";
-  return /^sk_(test|live)_[A-Za-z0-9]+$/.test(key) ? key : "";
+  return /^(sk|rk)_(test|live)_[A-Za-z0-9]+$/.test(key) ? key : "";
 }
 
 function publicBaseUrl() {
@@ -52,8 +52,9 @@ function publicBaseUrl() {
 }
 
 function livePaymentsAllowed() {
-  if (!stripeSecret()) return false;
-  if (stripeSecret().startsWith("sk_test_")) return true;
+  const key = stripeSecret();
+  if (!key) return false;
+  if (/^(sk|rk)_test_/.test(key)) return true;
   const base = publicBaseUrl();
   return process.env.NODE_ENV === "production"
     && process.env.STRIPE_LIVE_PAYMENTS === "true"
