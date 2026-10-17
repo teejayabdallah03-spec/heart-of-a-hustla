@@ -20,6 +20,8 @@ body{overflow-x:clip}.community-heading{flex-wrap:wrap}.community-heading .text-
 .swatch-row{margin-top:10px;gap:8px}
 .color-swatch{padding:0;cursor:pointer;opacity:.65;transition:opacity .15s,transform .15s}
 .color-swatch:hover,.color-swatch.selected{opacity:1;transform:scale(1.12)}
+.hero-scene .hero-image{right:-25%;bottom:-10%;width:min(74%,760px);height:116%}
+@media(max-width:700px){.hero-scene .hero-image{right:-35%;bottom:-8%;width:112%;height:88%;opacity:.85}}
 .color-swatch.selected{box-shadow:0 0 0 2px var(--paper),0 0 0 3px var(--accent)}
 .newsletter-stamp{color:rgba(242,29,61,.07)}
 .brand-monogram{width:68px;height:62px;object-fit:contain}.footer-wordmark .brand-monogram{width:76px;height:70px}
