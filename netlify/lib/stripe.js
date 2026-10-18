@@ -31,18 +31,32 @@ function siteOrigin(rawUrl) {
   return url.origin;
 }
 
-function paymentReady(rawUrl) {
+function paymentStatus(rawUrl) {
+  const configuredKey = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_KEY || "";
   const key = stripeSecret();
-  if (!key) return false;
-  if (/^(sk|rk)_test_/.test(key)) return true;
+  const checks = {
+    stripeKeyPresent: Boolean(configuredKey),
+    stripeKeyFormatValid: Boolean(key),
+    productionMode: process.env.NODE_ENV === "production",
+    livePaymentsEnabled: process.env.STRIPE_LIVE_PAYMENTS === "true",
+    httpsBaseUrl: false
+  };
+  if (!key) return { paymentReady: false, checks };
+  if (/^(sk|rk)_test_/.test(key)) return { paymentReady: true, checks };
   try {
-    return process.env.NODE_ENV === "production"
-      && process.env.STRIPE_LIVE_PAYMENTS === "true"
-      && new URL(siteOrigin(rawUrl)).protocol === "https:";
+    checks.httpsBaseUrl = new URL(siteOrigin(rawUrl)).protocol === "https:";
+    return {
+      paymentReady: checks.productionMode && checks.livePaymentsEnabled && checks.httpsBaseUrl,
+      checks
+    };
   } catch (error) {
     console.error("[payments] Invalid public site URL", error.message);
-    return false;
+    return { paymentReady: false, checks };
   }
+}
+
+function paymentReady(rawUrl) {
+  return paymentStatus(rawUrl).paymentReady;
 }
 
 function jsonResponse(statusCode, payload) {
@@ -255,5 +269,6 @@ module.exports = {
   createCheckout,
   jsonResponse,
   paymentReady,
+  paymentStatus,
   verifyCheckoutSession
 };

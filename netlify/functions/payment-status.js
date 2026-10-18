@@ -1,7 +1,7 @@
 "use strict";
 
-const { jsonResponse, paymentReady } = require("../lib/stripe");
+const { jsonResponse, paymentStatus } = require("../lib/stripe");
 
 exports.handler = async (event) => {
-  return jsonResponse(200, { paymentReady: paymentReady(event.rawUrl) });
+  return jsonResponse(200, paymentStatus(event.rawUrl));
 };

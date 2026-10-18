@@ -37,7 +37,7 @@ The Netlify build publishes only the storefront and its referenced product asset
 - For live payments after test checkout succeeds: set `PUBLIC_BASE_URL` to the site's canonical HTTPS URL, `STRIPE_SECRET_KEY` to the owner's live restricted key (`rk_live_...`) with those same permissions, and `STRIPE_LIVE_PAYMENTS=true`. Keep `NODE_ENV=production` for the production deploy. Live checkout remains blocked unless all live-mode requirements are met.
 - Netlify can use the existing `STRIPE_KEY` environment variable as a compatibility fallback, but prefer `STRIPE_SECRET_KEY` and mark it as a secret in Netlify. Never expose either variable to browser code or share its value in chat.
 
-Trigger a fresh production deploy after changing environment variables, and verify both `/api/status` and a successful Stripe test-mode payment flow before enabling live charges. Do not commit or publish `.env`.
+Trigger a fresh production deploy after changing environment variables, and verify that `/api/status` reports `paymentReady: true` and a successful Stripe test-mode payment flow before enabling live charges. Its `checks` object reports only configuration readiness booleans, never key material. Do not commit or publish `.env`.
 
 This setup does **not** include an owner dashboard, tax calculation, webhook-driven fulfillment, order database, or email delivery. The contact and newsletter forms remain previews and do not retain or send submissions. Product prices are set to $60 per hoodie and shipping to a flat $10 per order; displayed inventory is sample data, not live stock. Never put Stripe secret keys in HTML, CSS, or client-side JavaScript.
 
