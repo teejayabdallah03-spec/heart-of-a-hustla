@@ -10,7 +10,7 @@ Run `node server.js` from this folder and open `http://localhost:4173`. To build
 
 - Responsive navigation, product search, category/size/availability filters, and price sorting
 - Product detail dialogs with size selection and a size/fit guide
-- Five separate hoodie listings (Royal Blue, Rose Pink, Black, Orange, Sunshine Yellow) with matching product images at $60 each
+- Six separate hoodie listings (Royal Blue, Red, Rose Pink, Black, Orange, Sunshine Yellow) with matching product images at $60 each
 - Separate Coming Soon gallery for the five-color rhinestone hoodie, black beanie, and six varsity jacket colorways; these styles are display-only and are not available in the cart or checkout
 - Flat-rate $10 shipping in the cart and checkout preview
 - Stripe-hosted Checkout with server-validated product IDs, sizes, quantities, and prices

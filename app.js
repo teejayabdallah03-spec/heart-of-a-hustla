@@ -2,6 +2,7 @@
 
 const PRODUCTS = [
   { id: "ambition-blue", name: "Built on Ambition Studded Zip Hoodie", price: 60, category: "hoodies", color: "Royal Blue", badge: "THE AMBITION DROP", image: "assets/hoodie-royal-blue.png", description: "The signature studded full-zip hoodie, with Heart of a Hustla sleeve lettering and the Built on Ambition, Driven by Purpose statement across the back.", alt: "Royal blue studded Heart of a Hustla zip hoodie, shown front and back", stock: 18, sizes: ["S", "M", "L", "XL", "2XL", "3XL"] },
+  { id: "ambition-red", name: "Built on Ambition Studded Zip Hoodie", price: 60, category: "hoodies", color: "Red", badge: "THE AMBITION DROP", image: "assets/hoodie-front.png", description: "The signature studded full-zip hoodie, with Heart of a Hustla sleeve lettering and the Built on Ambition, Driven by Purpose statement across the back.", alt: "Red studded Heart of a Hustla zip hoodie", stock: 18, sizes: ["S", "M", "L", "XL", "2XL", "3XL"] },
   { id: "ambition-pink", name: "Built on Ambition Studded Zip Hoodie", price: 60, category: "hoodies", color: "Rose Pink", badge: "THE AMBITION DROP", image: "assets/hoodie-rose-pink.png", description: "The signature studded full-zip hoodie, with Heart of a Hustla sleeve lettering and the Built on Ambition, Driven by Purpose statement across the back.", alt: "Rose pink studded Heart of a Hustla zip hoodie, shown front and back", stock: 18, sizes: ["S", "M", "L", "XL", "2XL", "3XL"] },
   { id: "ambition-black", name: "Built on Ambition Studded Zip Hoodie", price: 60, category: "hoodies", color: "Black", badge: "THE AMBITION DROP", image: "assets/hoodie-black.png", description: "The signature studded full-zip hoodie, with Heart of a Hustla sleeve lettering and the Built on Ambition, Driven by Purpose statement across the back.", alt: "Black studded Heart of a Hustla zip hoodie, shown front and back", stock: 18, sizes: ["S", "M", "L", "XL", "2XL", "3XL"] },
   { id: "ambition-orange", name: "Built on Ambition Studded Zip Hoodie", price: 60, category: "hoodies", color: "Orange", badge: "THE AMBITION DROP", image: "assets/hoodie-orange.png", description: "The signature studded full-zip hoodie, with Heart of a Hustla sleeve lettering and the Built on Ambition, Driven by Purpose statement across the back.", alt: "Orange studded Heart of a Hustla zip hoodie, shown front and back", stock: 18, sizes: ["S", "M", "L", "XL", "2XL", "3XL"] },
@@ -62,6 +63,7 @@ function readCart() {
     return saved.reduce((lines, savedLine) => {
       const migratedColors = {
         "royal-blue": "ambition-blue",
+        red: "ambition-red",
         "rose-pink": "ambition-pink",
         black: "ambition-black",
         orange: "ambition-orange",

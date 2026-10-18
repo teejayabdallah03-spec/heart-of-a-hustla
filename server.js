@@ -11,6 +11,7 @@ const MAX_REQUEST_BYTES = 32 * 1024;
 const SIZES = new Set(["S", "M", "L", "XL", "2XL", "3XL"]);
 const PRODUCTS = new Map([
   ["ambition-blue", { name: "Built on Ambition Studded Zip Hoodie", color: "Royal Blue", price: 6000 }],
+  ["ambition-red", { name: "Built on Ambition Studded Zip Hoodie", color: "Red", price: 6000 }],
   ["ambition-pink", { name: "Built on Ambition Studded Zip Hoodie", color: "Rose Pink", price: 6000 }],
   ["ambition-black", { name: "Built on Ambition Studded Zip Hoodie", color: "Black", price: 6000 }],
   ["ambition-orange", { name: "Built on Ambition Studded Zip Hoodie", color: "Orange", price: 6000 }],
