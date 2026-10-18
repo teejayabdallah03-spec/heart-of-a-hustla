@@ -15,7 +15,7 @@ const PRODUCTS = new Map([
 ]);
 
 function stripeSecret() {
-  const key = process.env.STRIPE_SECRET_KEY || "";
+  const key = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_KEY || "";
   return /^(sk|rk)_(test|live)_[A-Za-z0-9]+$/.test(key) ? key : "";
 }
 

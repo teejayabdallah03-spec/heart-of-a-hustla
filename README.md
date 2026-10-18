@@ -35,6 +35,7 @@ The Netlify build publishes only the storefront and its referenced product asset
 
 - For initial testing: `STRIPE_SECRET_KEY` set to the Stripe test restricted key (`rk_test_...`) or test secret key. A restricted key for this integration only needs **Customers: Write** and **Checkout Sessions: Write**. Test mode may be used on a Netlify preview URL; it never charges a real card.
 - For live payments after test checkout succeeds: set `PUBLIC_BASE_URL` to the site's canonical HTTPS URL, `STRIPE_SECRET_KEY` to the owner's live restricted key (`rk_live_...`) with those same permissions, and `STRIPE_LIVE_PAYMENTS=true`. Keep `NODE_ENV=production` for the production deploy. Live checkout remains blocked unless all live-mode requirements are met.
+- Netlify can use the existing `STRIPE_KEY` environment variable as a compatibility fallback, but prefer `STRIPE_SECRET_KEY` and mark it as a secret in Netlify. Never expose either variable to browser code or share its value in chat.
 
 Trigger a fresh production deploy after changing environment variables, and verify both `/api/status` and a successful Stripe test-mode payment flow before enabling live charges. Do not commit or publish `.env`.
 
