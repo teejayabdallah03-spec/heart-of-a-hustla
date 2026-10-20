@@ -12,9 +12,9 @@ Run `node server.js` from this folder and open `http://localhost:4173`. To build
 - Product detail dialogs with size selection and a size/fit guide
 - Six separate hoodie listings (Royal Blue, Red, Rose Pink, Black, Orange, Sunshine Yellow) with matching product images at $60 each
 - Separate Coming Soon gallery for the five-color rhinestone hoodie, black beanie, and six varsity jacket colorways; these styles are display-only and are not available in the cart or checkout
-- Flat-rate $10 shipping in the cart and checkout preview
+- Optional free local pickup or $10 flat-rate shipping per order
+- Required customer name, email, and phone; Stripe Checkout collects the shipping address for shipped orders
 - Stripe-hosted Checkout with server-validated product IDs, sizes, quantities, and prices
-- Stripe Buy Button fallback for one hoodie per payment when the server-side Stripe key is not configured; selected color and size are attached as the Checkout Session client reference
 - Slide-out bag with quantity controls and persistence in local storage
 - Shipping estimate and a clearly labeled checkout preview
 - Contact form preview, newsletter preview, FAQ, and community links
@@ -30,7 +30,7 @@ Run `node server.js` from this folder and open `http://localhost:4173`. To build
 
 Stripe Checkout sends the payment to the Stripe account associated with `STRIPE_SECRET_KEY`; configured Stripe payouts then send funds to the bank account on that Stripe account. The ZIP supplied for reference is a mock/demo gateway, not a real processor, so its simulated approval flow is not used.
 
-The storefront also embeds the provided Stripe Buy Button as a fallback, so a customer can pay for one $60 hoodie without the server-side API key. The button is tied to the hoodie configured in Stripe; Stripe's Payment Link settings control shipping, taxes, and the post-payment redirect. The selected color and size are passed as a Checkout Session client reference. Customers must check out one hoodie at a time through this fallback. The server-side cart checkout remains necessary for multiple items in a single payment.
+All purchases use the server-side cart checkout so the customer can choose pickup or shipping, enter required contact details, and pay for multiple items together. If secure checkout is temporarily unavailable, the site preserves the bag and does not offer a separate Stripe button that could bypass those fulfillment and contact requirements.
 
 ## Deploy through Netlify
 
@@ -42,6 +42,6 @@ The Netlify build publishes only the storefront and its referenced product asset
 
 Trigger a fresh production deploy after changing environment variables, and verify that `/api/status` reports `paymentReady: true` and a successful Stripe test-mode payment flow before enabling live charges. Its `checks` object reports only configuration readiness booleans, never key material. Do not commit or publish `.env`.
 
-This setup does **not** include an owner dashboard, tax calculation, webhook-driven fulfillment, order database, or email delivery. The contact and newsletter forms remain previews and do not retain or send submissions. Product prices are set to $60 per hoodie and shipping to a flat $10 per order; displayed inventory is sample data, not live stock. Never put Stripe secret keys in HTML, CSS, or client-side JavaScript.
+This setup does **not** include an owner dashboard, tax calculation, webhook-driven fulfillment, order database, or email delivery. The contact and newsletter forms remain previews and do not retain or send submissions. Product prices are set to $60 per hoodie. Customers can choose free local pickup or pay a flat $10 shipping fee per shipped order; Stripe Checkout collects the shipping address for shipped orders. Displayed inventory is sample data, not live stock. Never put Stripe secret keys in HTML, CSS, or client-side JavaScript.
 
 Update the sample stock, size availability, contact email, and social links with approved brand information. Upcoming designs are intentionally display-only; add them to the storefront and server-side catalog only when they are ready to sell.

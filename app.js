@@ -26,8 +26,6 @@ const COMING_SOON_PRODUCTS = [
 const SIZES = ["S", "M", "L", "XL", "2XL", "3XL"];
 const STORAGE_KEY = "hoah-cart-v1";
 const SHIPPING_COST = 10;
-const STRIPE_BUY_BUTTON_ID = "buy_btn_1URjZlEANVNxDrgBgHBGAfhV";
-const STRIPE_PUBLISHABLE_KEY = "pk_live_51URdU4EANVNxDrgBGl90NGesJ85o8pW4KqllhfXRncUCLQfZ5aiL5UFLcQ26iJkxy19XysdACGuf1IETWa0yn75C00w7Lc1Ht1";
 let cart = readCart();
 let selectedProduct = null;
 let selectedSize = "";
@@ -183,52 +181,11 @@ function renderCart() {
     return `<article class="cart-line"><img src="${product.image}" alt="${product.alt}"><div><h3>${product.name}</h3><p>${product.color} · Size ${line.size}</p><span class="cart-line-price">${money(product.price)}</span><div class="quantity-control" aria-label="Quantity for ${product.color} ${product.name} size ${line.size}"><button type="button" data-quantity="${line.id}|${line.size}|-1" aria-label="Remove one">−</button><span>${line.quantity}</span><button type="button" data-quantity="${line.id}|${line.size}|1" aria-label="Add one">+</button></div></div><button class="remove-item" type="button" data-remove="${line.id}|${line.size}">REMOVE</button></article>`;
   }).join("");
   const total = subtotal();
-  footer.innerHTML = `<div class="cart-summary-line"><span>SUBTOTAL</span><strong>${money(total)}</strong></div><p class="cart-shipping-note">${paymentReady ? `Flat-rate shipping: ${money(SHIPPING_COST)}.` : "Stripe will show the amount configured for this hoodie before you pay."}</p><button type="button" class="button button-primary checkout-start">${paymentReady ? "CONTINUE TO CHECKOUT" : "CHECKOUT WITH STRIPE"} <span>↗</span></button><p class="cart-secure">${paymentReady ? "Secure payment powered by Stripe" : "Direct Stripe checkout is available for one hoodie per payment."}</p>`;
+  footer.innerHTML = `<div class="cart-summary-line"><span>SUBTOTAL</span><strong>${money(total)}</strong></div><p class="cart-shipping-note">${paymentReady ? `Free local pickup or ${money(SHIPPING_COST)} flat-rate shipping, selected at checkout.` : "Secure checkout is temporarily unavailable. Please try again later."}</p><button type="button" class="button button-primary checkout-start">CONTINUE TO CHECKOUT <span>↗</span></button><p class="cart-secure">${paymentReady ? "Secure payment powered by Stripe" : "Your bag is saved. No payment has been taken."}</p>`;
   $(".checkout-start").addEventListener("click", async () => {
     await refreshPaymentStatus();
-    if (!paymentReady) {
-      if (cart.length !== 1 || cart[0].quantity !== 1) {
-        $(".cart-secure", footer).textContent = "The direct Stripe button processes one hoodie at a time. Adjust your bag to one hoodie, then try again.";
-        return;
-      }
-      openStripeButtonCheckout(cart[0]);
-      return;
-    }
     openCheckout();
   });
-}
-
-async function openStripeButtonCheckout(line) {
-  const product = PRODUCTS.find((item) => item.id === line.id);
-  if (!product || !SIZES.includes(line.size)) {
-    announce("This hoodie selection is unavailable. Please refresh your bag.");
-    return;
-  }
-  closeCart();
-  $("#checkout-content").innerHTML = `
-    <div class="checkout-inner"><p class="eyebrow">SECURE STRIPE CHECKOUT</p><h2 id="checkout-title">YOUR HOODIE IS READY.</h2><p>${product.color} · Size ${line.size} · $60.00</p><div class="demo-notice">This Stripe button processes one hoodie per payment. Review the final amount, shipping, and tax shown by Stripe before paying.</div><div id="stripe-buy-button-container"></div><p class="cart-secure">Your selected color and size are attached to the Stripe order reference.</p><button type="button" class="button button-outline stripe-return-to-bag">RETURN TO BAG</button></div>`;
-  $("#checkout-dialog").showModal();
-  $(".stripe-return-to-bag").addEventListener("click", () => {
-    closeCheckout();
-    openCart();
-  });
-
-  const container = $("#stripe-buy-button-container");
-  await Promise.race([
-    customElements.whenDefined("stripe-buy-button"),
-    new Promise((resolve) => window.setTimeout(resolve, 10000))
-  ]);
-  if (!container.isConnected) return;
-  if (!customElements.get("stripe-buy-button")) {
-    container.textContent = "Stripe checkout did not load. Please try again or contact the store.";
-    console.error("Stripe Buy Button custom element did not load.");
-    return;
-  }
-  const button = document.createElement("stripe-buy-button");
-  button.setAttribute("buy-button-id", STRIPE_BUY_BUTTON_ID);
-  button.setAttribute("publishable-key", STRIPE_PUBLISHABLE_KEY);
-  button.setAttribute("client-reference-id", `hoah_${product.id}_${line.size}`);
-  container.replaceChildren(button);
 }
 
 function openProduct(id) {
@@ -259,7 +216,7 @@ function openCheckout() {
   if (!cart.length) return;
   closeCart();
   const total = subtotal();
-  const shipping = SHIPPING_COST;
+  const shipping = 0;
   const itemSummary = cart.map((line) => {
     const product = PRODUCTS.find((item) => item.id === line.id);
     return `<p><span>${product.color} hoodie · ${line.size} × ${line.quantity}</span><strong>${money(product.price * line.quantity)}</strong></p>`;
@@ -271,12 +228,10 @@ function openCheckout() {
     <div class="checkout-inner"><p class="eyebrow">ONE LAST STEP</p><h2 id="checkout-title">SECURE CHECKOUT</h2><p>Review your details before continuing to secure payment.</p><div class="demo-notice">${paymentNotice}</div>
       <form id="checkout-form" class="checkout-form">
         <label class="full">FULL NAME<input name="name" autocomplete="name" required></label>
-        <label>EMAIL<input name="email" type="email" autocomplete="email" required></label><label>PHONE<input name="phone" type="tel" autocomplete="tel"></label>
-        <label class="full">STREET ADDRESS<input name="address" autocomplete="street-address" required></label>
-        <label>CITY<input name="city" autocomplete="address-level2" required></label><label>STATE<input name="state" autocomplete="address-level1" required></label>
-        <label>ZIP CODE<input name="zip" autocomplete="postal-code" required></label><label>COUNTRY<select name="country" autocomplete="country-name"><option>United States</option><option>Canada</option></select></label>
-        <label class="full">SHIPPING METHOD<select name="shipping"><option value="${shipping}">Flat-rate shipping · ${money(shipping)}</option></select></label>
-        <div class="checkout-summary full">${itemSummary}<p><span>Subtotal · ${cart.reduce((sum, line) => sum + line.quantity, 0)} items</span><strong>${money(total)}</strong></p><p><span>Shipping</span><strong id="checkout-shipping">${money(shipping)}</strong></p><p class="checkout-total"><span>ESTIMATED TOTAL</span><strong id="checkout-total">${money(total + shipping)}</strong></p><p class="cart-secure">Tax is not calculated in this preview. Connect a tax provider for live checkout.</p></div>
+        <label>EMAIL<input name="email" type="email" autocomplete="email" required></label><label>PHONE<input name="phone" type="tel" autocomplete="tel" minlength="7" maxlength="30" pattern="[0-9+(). -]{7,30}" title="Enter a phone number with at least 7 digits." required></label>
+        <label class="full">FULFILLMENT<select name="fulfillment" required><option value="" selected disabled>Choose shipping or pickup</option><option value="ship">Ship to me · ${money(SHIPPING_COST)}</option><option value="pickup">Local pickup · Free</option></select></label>
+        <p class="fulfillment-note full" id="fulfillment-note">Choose how you would like to receive your order.</p>
+        <div class="checkout-summary full">${itemSummary}<p><span>Subtotal · ${cart.reduce((sum, line) => sum + line.quantity, 0)} items</span><strong>${money(total)}</strong></p><p><span id="checkout-shipping-label">Shipping</span><strong id="checkout-shipping">${money(shipping)}</strong></p><p class="checkout-total"><span>ESTIMATED TOTAL</span><strong id="checkout-total">${money(total + shipping)}</strong></p><p class="cart-secure">Tax is not calculated in this preview. Connect a tax provider for live checkout.</p></div>
         <button class="button button-primary" type="submit" ${paymentReady ? "" : "disabled"}>${paymentReady ? "CONTINUE TO PAYMENT" : "PAYMENT SETUP REQUIRED"} <span>↗</span></button>
       </form>
     </div>`;
@@ -287,8 +242,11 @@ function closeCheckout() {
   if ($("#checkout-dialog").open) $("#checkout-dialog").close();
 }
 
-function showConfirmation(reference) {
-  $("#checkout-content").innerHTML = `<div class="confirmation"><div class="confirm-mark">✳</div><p class="eyebrow">PAYMENT CONFIRMED BY STRIPE</p><h2>THANK YOU FOR<br>SUPPORTING THE HUSTLE.</h2><p>Your payment has been confirmed. Thanks for backing the movement.</p><p>Order reference: ${reference}</p><a class="button button-primary continue-shopping" href="#collection">BACK TO THE DROP <span>↗</span></a></div>`;
+function showConfirmation(reference, fulfillment) {
+  const fulfillmentMessage = fulfillment === "pickup"
+    ? "We'll contact you using the details you provided to coordinate local pickup."
+    : "Your shipping address was collected securely by Stripe.";
+  $("#checkout-content").innerHTML = `<div class="confirmation"><div class="confirm-mark">✳</div><p class="eyebrow">PAYMENT CONFIRMED BY STRIPE</p><h2>THANK YOU FOR<br>SUPPORTING THE HUSTLE.</h2><p>Your payment has been confirmed. Thanks for backing the movement.</p><p>${fulfillmentMessage}</p><p>Order reference: ${reference}</p><a class="button button-primary continue-shopping" href="#collection">BACK TO THE DROP <span>↗</span></a></div>`;
   cart = [];
   saveCart();
   setBagCount();
@@ -319,7 +277,7 @@ async function handleCheckoutReturn() {
     }
     url.searchParams.delete("checkout_session_id");
     history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
-    showConfirmation(result.orderReference);
+    showConfirmation(result.orderReference, result.fulfillmentMethod);
     $("#checkout-dialog").showModal();
   } catch (error) {
     announce("We couldn't verify the payment yet. Your bag is still saved.");
@@ -416,10 +374,15 @@ $("#mobile-menu").addEventListener("click", (event) => {
 $("#product-dialog .dialog-close").addEventListener("click", () => $("#product-dialog").close());
 $(".checkout-close").addEventListener("click", closeCheckout);
 $("#checkout-dialog").addEventListener("change", (event) => {
-  if (event.target.name !== "shipping") return;
-  const shipping = Number(event.target.value);
+  if (event.target.name !== "fulfillment") return;
+  const isShipping = event.target.value === "ship";
+  const shipping = isShipping ? SHIPPING_COST : 0;
   $("#checkout-shipping").textContent = money(shipping);
+  $("#checkout-shipping-label").textContent = isShipping ? "Shipping" : "Pickup";
   $("#checkout-total").textContent = money(subtotal() + shipping);
+  $("#fulfillment-note").textContent = isShipping
+    ? "Stripe will securely collect your shipping address at the next step. Shipping is available to the United States and Canada."
+    : "Local pickup is free. We'll contact you using the details provided to coordinate a pickup time and location.";
 });
 $("#checkout-content").addEventListener("submit", (event) => {
   if (event.target.id !== "checkout-form") return;
@@ -434,19 +397,15 @@ $("#checkout-content").addEventListener("submit", (event) => {
   const customer = {
     name: values.get("name"),
     email: values.get("email"),
-    phone: values.get("phone"),
-    address: values.get("address"),
-    city: values.get("city"),
-    state: values.get("state"),
-    zip: values.get("zip"),
-    country: { "United States": "US", Canada: "CA" }[values.get("country")]
+    phone: values.get("phone")
   };
+  const fulfillment = values.get("fulfillment");
   submit.disabled = true;
   notice.textContent = "Preparing your secure Stripe checkout…";
   fetch("/api/checkout", {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ items: cart, customer })
+    body: JSON.stringify({ items: cart, customer, fulfillment })
   }).then(async (response) => {
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "Couldn't start secure checkout.");

@@ -93,18 +93,11 @@ function validateCustomer(value) {
   const customer = {
     name: String(value.name || "").trim(),
     email: String(value.email || "").trim().toLowerCase(),
-    phone: String(value.phone || "").trim(),
-    address: String(value.address || "").trim(),
-    city: String(value.city || "").trim(),
-    state: String(value.state || "").trim(),
-    zip: String(value.zip || "").trim(),
-    country: String(value.country || "").trim().toUpperCase()
+    phone: String(value.phone || "").trim()
   };
   if (customer.name.length < 2 || customer.name.length > 100) return null;
   if (customer.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) return null;
-  if (customer.phone.length > 30 || !customer.address || customer.address.length > 200) return null;
-  if (!customer.city || customer.city.length > 100 || !customer.state || customer.state.length > 100) return null;
-  if (!customer.zip || customer.zip.length > 20 || !["US", "CA"].includes(customer.country)) return null;
+  if (customer.phone.length > 30 || !/^[+()\d.\s-]+$/.test(customer.phone) || (customer.phone.match(/\d/g) || []).length < 7) return null;
   return customer;
 }
 
@@ -193,27 +186,16 @@ async function createCheckout(request, response) {
   }
   const items = validateItems(body.items);
   const customer = validateCustomer(body.customer);
-  if (!items || !customer) {
-    return sendJson(response, 400, { error: "Check your contact, shipping, size, and cart details." });
+  const fulfillment = body.fulfillment;
+  if (!items || !customer || !["ship", "pickup"].includes(fulfillment)) {
+    return sendJson(response, 400, { error: "Check your contact, fulfillment, size, and cart details." });
   }
 
   try {
     const stripeCustomer = await stripeRequest("customers", {
       name: customer.name,
       email: customer.email,
-      phone: customer.phone,
-      "address[line1]": customer.address,
-      "address[city]": customer.city,
-      "address[state]": customer.state,
-      "address[postal_code]": customer.zip,
-      "address[country]": customer.country,
-      "shipping[name]": customer.name,
-      "shipping[phone]": customer.phone,
-      "shipping[address][line1]": customer.address,
-      "shipping[address][city]": customer.city,
-      "shipping[address][state]": customer.state,
-      "shipping[address][postal_code]": customer.zip,
-      "shipping[address][country]": customer.country
+      phone: customer.phone
     });
 
     const fields = {
@@ -221,17 +203,22 @@ async function createCheckout(request, response) {
       customer: stripeCustomer.id,
       client_reference_id: crypto.randomUUID(),
       "metadata[store]": "heart-of-a-hustla",
+      "metadata[fulfillment]": fulfillment,
       "billing_address_collection": "auto",
-      "shipping_address_collection[allowed_countries][0]": customer.country,
       "phone_number_collection[enabled]": "true",
-      "shipping_options[0][shipping_rate_data][type]": "fixed_amount",
-      "shipping_options[0][shipping_rate_data][fixed_amount][amount]": String(SHIPPING_CENTS),
-      "shipping_options[0][shipping_rate_data][fixed_amount][currency]": "usd",
-      "shipping_options[0][shipping_rate_data][display_name]": "Flat-rate shipping",
       "success_url": `${publicBaseUrl().origin}/?checkout_session_id={CHECKOUT_SESSION_ID}#collection`,
       "cancel_url": `${publicBaseUrl().origin}/?checkout=cancel#collection`,
       "expires_at": String(Math.floor(Date.now() / 1000) + 31 * 60)
     };
+    if (fulfillment === "ship") {
+      fields["customer_update[shipping]"] = "auto";
+      fields["shipping_address_collection[allowed_countries][0]"] = "US";
+      fields["shipping_address_collection[allowed_countries][1]"] = "CA";
+      fields["shipping_options[0][shipping_rate_data][type]"] = "fixed_amount";
+      fields["shipping_options[0][shipping_rate_data][fixed_amount][amount]"] = String(SHIPPING_CENTS);
+      fields["shipping_options[0][shipping_rate_data][fixed_amount][currency]"] = "usd";
+      fields["shipping_options[0][shipping_rate_data][display_name]"] = "Flat-rate shipping";
+    }
 
     items.forEach((item, index) => {
       fields[`line_items[${index}][price_data][currency]`] = "usd";
@@ -267,7 +254,8 @@ async function verifyCheckoutSession(request, response, url) {
     }
     return sendJson(response, 200, {
       paymentStatus: session.payment_status,
-      orderReference: session.id.slice(-8).toUpperCase()
+      orderReference: session.id.slice(-8).toUpperCase(),
+      fulfillmentMethod: session.metadata?.fulfillment === "pickup" ? "pickup" : "ship"
     });
   } catch (error) {
     console.error("[payments] Unable to verify a checkout session", error.message);
