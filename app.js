@@ -26,6 +26,8 @@ const COMING_SOON_PRODUCTS = [
 const SIZES = ["S", "M", "L", "XL", "2XL", "3XL"];
 const STORAGE_KEY = "hoah-cart-v1";
 const SHIPPING_COST = 10;
+const STRIPE_BUY_BUTTON_ID = "buy_btn_1URjZlEANVNxDrgBgHBGAfhV";
+const STRIPE_PUBLISHABLE_KEY = "pk_live_51URdU4EANVNxDrgBGl90NGesJ85o8pW4KqllhfXRncUCLQfZ5aiL5UFLcQ26iJkxy19XysdACGuf1IETWa0yn75C00w7Lc1Ht1";
 let cart = readCart();
 let selectedProduct = null;
 let selectedSize = "";
@@ -181,11 +183,52 @@ function renderCart() {
     return `<article class="cart-line"><img src="${product.image}" alt="${product.alt}"><div><h3>${product.name}</h3><p>${product.color} · Size ${line.size}</p><span class="cart-line-price">${money(product.price)}</span><div class="quantity-control" aria-label="Quantity for ${product.color} ${product.name} size ${line.size}"><button type="button" data-quantity="${line.id}|${line.size}|-1" aria-label="Remove one">−</button><span>${line.quantity}</span><button type="button" data-quantity="${line.id}|${line.size}|1" aria-label="Add one">+</button></div></div><button class="remove-item" type="button" data-remove="${line.id}|${line.size}">REMOVE</button></article>`;
   }).join("");
   const total = subtotal();
-  footer.innerHTML = `<div class="cart-summary-line"><span>SUBTOTAL</span><strong>${money(total)}</strong></div><p class="cart-shipping-note">Flat-rate shipping: ${money(SHIPPING_COST)}.</p><button type="button" class="button button-primary checkout-start">CONTINUE TO CHECKOUT <span>↗</span></button><p class="cart-secure">Secure payment powered by Stripe</p>`;
+  footer.innerHTML = `<div class="cart-summary-line"><span>SUBTOTAL</span><strong>${money(total)}</strong></div><p class="cart-shipping-note">${paymentReady ? `Flat-rate shipping: ${money(SHIPPING_COST)}.` : "Stripe will show the amount configured for this hoodie before you pay."}</p><button type="button" class="button button-primary checkout-start">${paymentReady ? "CONTINUE TO CHECKOUT" : "CHECKOUT WITH STRIPE"} <span>↗</span></button><p class="cart-secure">${paymentReady ? "Secure payment powered by Stripe" : "Direct Stripe checkout is available for one hoodie per payment."}</p>`;
   $(".checkout-start").addEventListener("click", async () => {
     await refreshPaymentStatus();
+    if (!paymentReady) {
+      if (cart.length !== 1 || cart[0].quantity !== 1) {
+        $(".cart-secure", footer).textContent = "The direct Stripe button processes one hoodie at a time. Adjust your bag to one hoodie, then try again.";
+        return;
+      }
+      openStripeButtonCheckout(cart[0]);
+      return;
+    }
     openCheckout();
   });
+}
+
+async function openStripeButtonCheckout(line) {
+  const product = PRODUCTS.find((item) => item.id === line.id);
+  if (!product || !SIZES.includes(line.size)) {
+    announce("This hoodie selection is unavailable. Please refresh your bag.");
+    return;
+  }
+  closeCart();
+  $("#checkout-content").innerHTML = `
+    <div class="checkout-inner"><p class="eyebrow">SECURE STRIPE CHECKOUT</p><h2 id="checkout-title">YOUR HOODIE IS READY.</h2><p>${product.color} · Size ${line.size} · $60.00</p><div class="demo-notice">This Stripe button processes one hoodie per payment. Review the final amount, shipping, and tax shown by Stripe before paying.</div><div id="stripe-buy-button-container"></div><p class="cart-secure">Your selected color and size are attached to the Stripe order reference.</p><button type="button" class="button button-outline stripe-return-to-bag">RETURN TO BAG</button></div>`;
+  $("#checkout-dialog").showModal();
+  $(".stripe-return-to-bag").addEventListener("click", () => {
+    closeCheckout();
+    openCart();
+  });
+
+  const container = $("#stripe-buy-button-container");
+  await Promise.race([
+    customElements.whenDefined("stripe-buy-button"),
+    new Promise((resolve) => window.setTimeout(resolve, 10000))
+  ]);
+  if (!container.isConnected) return;
+  if (!customElements.get("stripe-buy-button")) {
+    container.textContent = "Stripe checkout did not load. Please try again or contact the store.";
+    console.error("Stripe Buy Button custom element did not load.");
+    return;
+  }
+  const button = document.createElement("stripe-buy-button");
+  button.setAttribute("buy-button-id", STRIPE_BUY_BUTTON_ID);
+  button.setAttribute("publishable-key", STRIPE_PUBLISHABLE_KEY);
+  button.setAttribute("client-reference-id", `hoah_${product.id}_${line.size}`);
+  container.replaceChildren(button);
 }
 
 function openProduct(id) {

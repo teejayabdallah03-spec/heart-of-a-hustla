@@ -14,6 +14,7 @@ Run `node server.js` from this folder and open `http://localhost:4173`. To build
 - Separate Coming Soon gallery for the five-color rhinestone hoodie, black beanie, and six varsity jacket colorways; these styles are display-only and are not available in the cart or checkout
 - Flat-rate $10 shipping in the cart and checkout preview
 - Stripe-hosted Checkout with server-validated product IDs, sizes, quantities, and prices
+- Stripe Buy Button fallback for one hoodie per payment when the server-side Stripe key is not configured; selected color and size are attached as the Checkout Session client reference
 - Slide-out bag with quantity controls and persistence in local storage
 - Shipping estimate and a clearly labeled checkout preview
 - Contact form preview, newsletter preview, FAQ, and community links
@@ -28,6 +29,8 @@ Run `node server.js` from this folder and open `http://localhost:4173`. To build
 4. Before launch, deploy the Node server or the Netlify Functions behind HTTPS. Create a live restricted key with the same tested permissions, set it as `STRIPE_SECRET_KEY`, and explicitly set `STRIPE_LIVE_PAYMENTS=true` only after testing. Live charges are intentionally blocked without production mode, HTTPS, and this opt-in.
 
 Stripe Checkout sends the payment to the Stripe account associated with `STRIPE_SECRET_KEY`; configured Stripe payouts then send funds to the bank account on that Stripe account. The ZIP supplied for reference is a mock/demo gateway, not a real processor, so its simulated approval flow is not used.
+
+The storefront also embeds the provided Stripe Buy Button as a fallback, so a customer can pay for one $60 hoodie without the server-side API key. The button is tied to the hoodie configured in Stripe; Stripe's Payment Link settings control shipping, taxes, and the post-payment redirect. The selected color and size are passed as a Checkout Session client reference. Customers must check out one hoodie at a time through this fallback. The server-side cart checkout remains necessary for multiple items in a single payment.
 
 ## Deploy through Netlify
 
