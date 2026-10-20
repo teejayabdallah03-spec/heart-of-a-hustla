@@ -15,8 +15,9 @@ const PRODUCTS = new Map([
 ]);
 
 function stripeSecret() {
-  const key = (process.env.STRIPE_SECRET_KEY || process.env.STRIPE_KEY || "").trim();
-  return /^(sk|rk)_(test|live)_[A-Za-z0-9_-]{16,}$/.test(key) ? key : "";
+  return [process.env.STRIPE_SECRET_KEY, process.env.STRIPE_KEY]
+    .map((key) => (key || "").trim())
+    .find((key) => /^(sk|rk)_(test|live)_[A-Za-z0-9_-]{16,}$/.test(key)) || "";
 }
 
 function siteOrigin(rawUrl) {
@@ -32,7 +33,8 @@ function siteOrigin(rawUrl) {
 }
 
 function paymentStatus(rawUrl) {
-  const configuredKey = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_KEY || "";
+  const configuredKey = [process.env.STRIPE_SECRET_KEY, process.env.STRIPE_KEY]
+    .some((key) => Boolean((key || "").trim()));
   const key = stripeSecret();
   const checks = {
     stripeKeyPresent: Boolean(configuredKey),

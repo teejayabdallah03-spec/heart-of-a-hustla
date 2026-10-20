@@ -36,8 +36,9 @@ const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || "127.0.0.1";
 
 function stripeSecret() {
-  const key = (process.env.STRIPE_SECRET_KEY || process.env.STRIPE_KEY || "").trim();
-  return /^(sk|rk)_(test|live)_[A-Za-z0-9_-]{16,}$/.test(key) ? key : "";
+  return [process.env.STRIPE_SECRET_KEY, process.env.STRIPE_KEY]
+    .map((key) => (key || "").trim())
+    .find((key) => /^(sk|rk)_(test|live)_[A-Za-z0-9_-]{16,}$/.test(key)) || "";
 }
 
 function publicBaseUrl() {
